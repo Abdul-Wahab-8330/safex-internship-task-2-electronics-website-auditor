@@ -14,7 +14,7 @@ api_key = os.getenv("GEMINI_API_KEY")
 st.set_page_config(page_title="AI Electronics Website Auditor", page_icon="⚡", layout="centered")
 
 st.title("⚡ AI-Assisted Website Quality Auditor")
-st.subheader("Task Line 286: Electronics Websites Focus")
+st.subheader("Electronics Websites Focus")
 st.write("Scrape a live electronics URL and get a quick score and concise quality audit.")
 
 # Main Input Form
