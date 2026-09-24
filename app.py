@@ -15,7 +15,7 @@ st.set_page_config(page_title="AI Electronics Website Auditor", page_icon="⚡",
 
 st.title("⚡ AI-Assisted Website Quality Auditor")
 st.subheader("Electronics Websites Focus")
-st.write("Scrape a live electronics URL and get a quick score and concise quality audit.")
+st.write("Scrape a live electronics URL, inspect extracted HTML components, and get a concise quality audit.")
 
 # Main Input Form
 url_input = st.text_input("Target Electronics Website URL", placeholder="https://example-electronics-store.com")
@@ -26,21 +26,44 @@ if st.button("Run Quick Electronics Audit"):
     elif not api_key:
         st.error("GEMINI_API_KEY not found. Please ensure your environment variable is set up.")
     else:
-        with st.spinner("Analyzing website quality..."):
+        # Use st.status to show step-by-step execution visibility
+        with st.status("🚀 Executing Audit Pipeline...", expanded=True) as status:
+            
             try:
-                # 1. Fetch Webpage Content via Requests
+                # Step 1: Fetching Webpage
+                st.write("🌐 Step 1: Sending HTTP request to target URL...")
                 headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"}
                 response = requests.get(url_input, headers=headers, timeout=10)
                 
-                if response.status_code == 200:
-                    # 2. Parse HTML using BeautifulSoup
+                if response.status_code != 200:
+                    status.update(label="❌ Failed to fetch webpage!", state="error")
+                    st.error(f"Failed to fetch the URL. HTTP Status Code: {response.status_code}")
+                else:
+                    st.write(f"✅ Successfully fetched webpage! (Status Code: {response.status_code})")
+                    
+                    # Step 2: Parsing HTML & Extracting Tags
+                    st.write("soup 🍜 Step 2: Parsing HTML structure using BeautifulSoup...")
                     soup = BeautifulSoup(response.text, 'html.parser')
                     
                     page_title = soup.title.string if soup.title else "No Title Found"
-                    raw_text = " ".join([p.get_text() for p in soup.find_all(['p', 'h1', 'h2', 'h3', 'li', 'span'])])
+                    
+                    # Count specific element tags for visibility
+                    h1_count = len(soup.find_all('h1'))
+                    h2_count = len(soup.find_all('h2'))
+                    h3_count = len(soup.find_all('h3'))
+                    p_count = len(soup.find_all('p'))
+                    li_count = len(soup.find_all('li'))
+                    
+                    st.write(f"🏷️ Extracted Tags Breakdown: **{h1_count}** H1s | **{h2_count}** H2s | **{h3_count}** H3s | **{p_count}** Paragraphs | **{li_count}** List Items")
+                    
+                    raw_text = " ".join([elem.get_text() for elem in soup.find_all(['p', 'h1', 'h2', 'h3', 'li', 'span'])])
                     trimmed_text = raw_text[:8000] # Shorter text limit for speed and conciseness
                     
-                    # 3. Short & Punchy Prompt for Gemini
+                    st.write("✂️ Step 3: Text cleaned and trimmed for AI analysis.")
+                    
+                    # Step 3: Calling Gemini API
+                    st.write("🤖 Step 4: Sending data to Gemini AI for evaluation...")
+                    
                     prompt_text = f"""
                     You are an expert e-commerce auditor for electronics websites.
                     Analyze this scraped webpage data:
@@ -56,7 +79,6 @@ if st.button("Run Quick Electronics Audit"):
                     Keep it brief, direct, and avoid long paragraphs.
                     """
                     
-                    # 4. Call Gemini REST API
                     gemini_url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key={api_key}"
                     payload = {
                         "contents": [{
@@ -70,17 +92,25 @@ if st.button("Run Quick Electronics Audit"):
                         res_json = ai_response.json()
                         audit_report = res_json["candidates"][0]["content"]["parts"][0]["text"]
                         
-                        st.success("Audit Completed!")
+                        status.update(label="✨ Audit Completed Successfully!", state="complete", expanded=False)
                         
-                        # 5. Display Results
+                        # Display Inspection Data
+                        st.markdown("---")
+                        st.markdown("### 🔍 Inspected Page Breakdown")
+                        st.info(f"**Page Title:** {page_title}")
+                        
+                        with st.expander("📄 View Raw Extracted Text Sent to AI (Preview)"):
+                            st.text(trimmed_text[:1500] + "\n... [Rest of text truncated for display]")
+                        
+                        # Display Final Results
                         st.markdown("### 📊 Audit Results")
-                        st.write(f"**Target:** {url_input}")
+                        st.write(f"**Target URL:** {url_input}")
                         st.markdown(audit_report)
+                        
                     else:
+                        status.update(label="❌ Gemini API Error", state="error")
                         st.error(f"Gemini API Error: {ai_response.status_code} - {ai_response.text}")
                         
-                else:
-                    st.error(f"Failed to fetch the URL. HTTP Status Code: {response.status_code}")
-                    
             except Exception as e:
+                status.update(label="❌ Execution Error", state="error")
                 st.error(f"An error occurred: {e}")
