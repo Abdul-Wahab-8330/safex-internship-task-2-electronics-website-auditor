@@ -26,9 +26,13 @@ if st.button("Run Quick Electronics Audit"):
     elif not api_key:
         st.error("GEMINI_API_KEY not found. Please ensure your environment variable is set up.")
     else:
+        # Variables to store results outside the status block
+        audit_report = None
+        page_title = ""
+        trimmed_text = ""
+        
         # Use st.status to show step-by-step execution visibility
         with st.status("🚀 Executing Audit Pipeline...", expanded=True) as status:
-            
             try:
                 # Step 1: Fetching Webpage
                 st.write("🌐 Step 1: Sending HTTP request to target URL...")
@@ -42,7 +46,7 @@ if st.button("Run Quick Electronics Audit"):
                     st.write(f"✅ Successfully fetched webpage! (Status Code: {response.status_code})")
                     
                     # Step 2: Parsing HTML & Extracting Tags
-                    st.write("soup 🍜 Step 2: Parsing HTML structure using BeautifulSoup...")
+                    st.write("🍜 Step 2: Parsing HTML structure using BeautifulSoup...")
                     soup = BeautifulSoup(response.text, 'html.parser')
                     
                     page_title = soup.title.string if soup.title else "No Title Found"
@@ -91,22 +95,7 @@ if st.button("Run Quick Electronics Audit"):
                     if ai_response.status_code == 200:
                         res_json = ai_response.json()
                         audit_report = res_json["candidates"][0]["content"]["parts"][0]["text"]
-                        
                         status.update(label="✨ Audit Completed Successfully!", state="complete", expanded=False)
-                        
-                        # Display Inspection Data
-                        st.markdown("---")
-                        st.markdown("### 🔍 Inspected Page Breakdown")
-                        st.info(f"**Page Title:** {page_title}")
-                        
-                        with st.expander("📄 View Raw Extracted Text Sent to AI (Preview)"):
-                            st.text(trimmed_text[:1500] + "\n... [Rest of text truncated for display]")
-                        
-                        # Display Final Results
-                        st.markdown("### 📊 Audit Results")
-                        st.write(f"**Target URL:** {url_input}")
-                        st.markdown(audit_report)
-                        
                     else:
                         status.update(label="❌ Gemini API Error", state="error")
                         st.error(f"Gemini API Error: {ai_response.status_code} - {ai_response.text}")
@@ -114,3 +103,16 @@ if st.button("Run Quick Electronics Audit"):
             except Exception as e:
                 status.update(label="❌ Execution Error", state="error")
                 st.error(f"An error occurred: {e}")
+
+        # Display Results Outside the Status Box (Prevents nesting errors)
+        if audit_report:
+            st.markdown("---")
+            st.markdown("### 🔍 Inspected Page Breakdown")
+            st.info(f"**Page Title:** {page_title}")
+            
+            with st.expander("📄 View Raw Extracted Text Sent to AI (Preview)"):
+                st.text(trimmed_text[:1500] + "\n... [Rest of text truncated for display]")
+            
+            st.markdown("### 📊 Audit Results")
+            st.write(f"**Target URL:** {url_input}")
+            st.markdown(audit_report)
